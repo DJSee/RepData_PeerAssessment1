@@ -1,25 +1,182 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Activity Data Analysis"
+author: "DSee"
+date: "11/6/2020"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width=6, fig.height=4, fig.align = "center", warning=FALSE, comment = "", message=FALSE)
+```
 
-## Loading and preprocessing the data
+## Personal Activity Monitoring Device Analysis
+
+The data in this analysis is taken from a device that collected data at 5 minute intervals throughout the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+### Read And Prepare The Data Set
+#### Read The Data
+
+```{r}
+if(file.exists("./activity.zip")){
+  unzip("./activity.zip")
+}
+
+dataOrig <- read.csv("activity.csv")
+head(dataOrig)
+```
+
+#### Load The Necessary Packages
+```{r message=FALSE, warning=FALSE}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+```
+
+
+#### Preprocess Data By Converting Strings To Dates
+
+```{r}
+dataOrig$date <- as.Date(dataOrig$date)
+```
+
+<br />
+<br />
+<br />
+
+### *What Is The Total Number Of Steps Taken Per Day?*
+#### Calculate Step Sum By Day
+
+```{r}
+totalStepsSumByDay <- dataOrig %>% group_by(date) %>% summarise(totalSteps = sum(steps))
+head(totalStepsSumByDay, 4)
+```
+
+#### Histogram Of The Total Number Of Steps Taken Each Day
+```{r}
+theBinWidth=(max(totalStepsSumByDay$totalSteps, na.rm=TRUE)-min(totalStepsSumByDay$totalSteps, na.rm=TRUE))/10
+
+ggplot(totalStepsSumByDay, aes(x=totalSteps)) + 
+  geom_histogram(binwidth = theBinWidth, fill = "#6699dd", col="#333333") +
+  labs(x = "Total Steps", y = "Count", title = "Histogram of Total Steps Per Interval")
+
+```
+
+
+#### The Mean Of The Total Number Of Steps Taken Per Day
+
+```{r}
+meanTotalSteps <- mean(totalStepsSumByDay$totalSteps, na.rm=TRUE)
+paste("mean = ", round(meanTotalSteps,2))
+
+```
+
+#### The Median Of The Total Number Of Steps Taken Per Day
+
+```{r}
+medianTotalSteps <- median(totalStepsSumByDay$totalSteps, na.rm=TRUE)
+paste("median = ", medianTotalSteps)
+
+```
+
+<br />
+<br />
+<br />
+
+### *What Is The Average Daily Activity Pattern?*
+#### Time Series Graph Of Time Interval vs Mean Number Of Steps Taken Across All Days
+
+```{r}
+totalStepsMeanByInterval <- dataOrig %>% group_by(interval) %>% summarise(meanSteps = mean(steps, na.rm=TRUE))
+
+g <- ggplot(totalStepsMeanByInterval, aes(interval, meanSteps))
+
+g + geom_line(col="#3355aa") + 
+  labs(x ="Interval", y="Mean Steps", title="Interval vs Mean Steps Per Interval")
+```
+
+#### Time Interval With The Maximum Number Of Steps
+
+```{r}
+maxIntervalIndex <- which(totalStepsMeanByInterval$meanSteps == max(totalStepsMeanByInterval$meanSteps))
+maxInterval <- totalStepsMeanByInterval$interval[maxIntervalIndex]
+paste("Max interval = " , maxInterval)
+```
+
+<br />
+<br />
+<br />
+
+### *What Is The Total Number Of Steps Taken Per Day With Imputed Data?*
+#### Number Of Rows With NAs
+```{r}
+numberNAs <- sum(!complete.cases(dataOrig))
+paste("Number of rows with NA = " , numberNAs)
+```
 
 
 
-## What is mean total number of steps taken per day?
+#### Replace The NAs In The Data Set With The Mean According To The Corresponding Time Interval
+
+```{r}
+dataOrig <- dataOrig %>% group_by(interval)%>%mutate(steps=ifelse(is.na(steps),mean(steps, na.rm=TRUE),steps))
+head(dataOrig)
+```
+
+#### Histogram Of The Total Number Of Steps Taken Each Day For The Imputed Data
+
+```{r}
+totalStepsSumByDayImputed <- dataOrig %>% group_by(date) %>% summarise(totalSteps = sum(steps))
+theBinWidth = (max(totalStepsSumByDayImputed$totalSteps, na.rm=TRUE) - min(totalStepsSumByDayImputed$totalSteps, na.rm=TRUE)) / 10
+
+ggplot(totalStepsSumByDayImputed, aes(x=totalSteps)) + 
+  geom_histogram(binwidth = theBinWidth, fill = "#99aaff", col="#333333")
+
+```
+
+#### The Mean Of The Total Number Of Steps Taken Per Day For The Imputed Data
+
+```{r}
+meanTotalStepsImputed <- mean(totalStepsSumByDayImputed$totalSteps)
+paste("mean = ", round(meanTotalStepsImputed,2))
+
+```
+
+#### The Median Of The Total Number Of Steps Taken Per Day For The Imputed Data
+
+```{r}
+medianTotalStepsImputed <- median(totalStepsSumByDayImputed$totalSteps)
+paste("median = ", round(medianTotalStepsImputed,2))
+
+```
+
+#### Comparing The Non-Imputed Data To The Imputed Data
+
+The histogram of total steps taken each day for the non-imputed data is similar in shape to the histogram with imputed data. However, the 6th rectangle of the histogram of imputed data is higher and therefore indicates a higher frequency. The means of the non-imputed and imputed data are the same. The medians of the non-imputed and imputed data are different. 
+
+NOTE: In the calculation of mean and median for the non-imputed data, I used na.rm = TRUE to eliminate the variables with an NA from the calculations.
+
+<br />
+<br />
+<br />
+
+### *Are There Differences In Activity Patterns Between Weekdays And Weekends?*
+#### Add A Factor Variable To The Data Set For Weekend Or Weekday
+```{r}
+dataOrig <- dataOrig %>% mutate(dayOfWeek=ifelse(weekdays(date) %in% c("Saturday","Sunday"),"weekend","weekday"))
+dataOrig$dayOfWeek <- as.factor(dataOrig$dayOfWeek)
+head(dataOrig)
+```
 
 
+#### Panel Plot - Time Series Graphs Of Time Interval vs Mean Number Of Steps By Weekend vs Weekday
+```{r fig.height=5}
+totalStepsMeanByIntervalAndDayOfWeek <- 
+  dataOrig %>% group_by(dayOfWeek,interval) %>% summarise(meanSteps = mean(steps, na.rm=TRUE))
 
-## What is the average daily activity pattern?
+g <- ggplot(totalStepsMeanByIntervalAndDayOfWeek, aes(interval, meanSteps))
+g + geom_line(col="#4477bb") + facet_wrap( ~ dayOfWeek, nrow=2, ncol=1 ) + 
+  labs(x ="Interval", y="Mean Steps", title="Weekday vs Weekend Mean Steps Per Time Interval")
+
+```
 
 
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
