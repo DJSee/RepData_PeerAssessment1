@@ -1,7 +1,7 @@
 ---
 title: "Activity Data Analysis"
-author: "DSee"
-date: "11/6/2020"
+author: "D See"
+date: "11/7/2020"
 output: html_document
 ---
 
