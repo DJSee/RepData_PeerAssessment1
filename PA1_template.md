@@ -3,9 +3,9 @@ Personal Activity Monitoring Device Analysis
 
 The data anlyzed below was taken from devices that collected data at 5
 minute intervals throughout the day. The data consists of two months of
-data from an anonymous individual collected during the months of October
-and November, 2012 and include the number of steps taken in 5 minute
-intervals each day.
+data from an anonymous individual and was collected during the months of
+October and November, 2012 and include the number of steps taken in 5
+minute intervals each day.
 
 ### Read And Prepare The Data Set
 
